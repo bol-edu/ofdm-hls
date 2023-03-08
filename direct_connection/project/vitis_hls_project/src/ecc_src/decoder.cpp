@@ -1,0 +1,219 @@
+#include "decoder.h"
+#define module_num 11
+#define truncate 33 //defined truncate length
+
+void decoder(ap_uint_64_str& data_in, ap_uint_64_str& data_out)
+{
+
+#pragma HLS INTERFACE mode=ap_ctrl_none port=return
+
+	ap_uint<QAM_unsigned_bit> out_temp_1;
+	ap_uint<QAM_unsigned_bit> out_temp_2;
+	ap_uint_64 data_in_axiu;
+	ap_uint_64 data_out_temp;
+	ap_uint_64 para_out_temp;
+
+	int DATA_LEN;
+	int qam_num;
+	int sym_num;
+	int pilot_width;
+	int CP_length;
+	ap_uint_64 para_in_axiu;
+	ap_uint_64 para_in;
+	int module_id;
+	int para_id;
+	int para_val;
+
+	do{
+		para_in = data_in.read();
+		module_id = para_in.range(63, para_id_bit+para_val_bit);
+		if(module_id == module_num){
+			para_id = para_in.range(para_id_bit+para_val_bit-1, para_val_bit);
+			para_val = para_in.range(para_val_bit-1, 0);
+			if(para_id == 0){
+				DATA_LEN = para_val;
+			}
+			else if(para_id == 1){
+				qam_num = para_val;
+			}
+			else if(para_id == 2){
+				sym_num = para_val;
+			}
+			else if(para_id == 3){
+				pilot_width = para_val;
+			}
+		}
+		else{
+			data_out.write(para_in);
+		}
+	}while(module_id != threshold);
+	//--------------------------------------------------//
+
+	static int count = 0;
+	ap_uint<QAM_unsigned_bit> QAM_in_temp;
+	static ap_uint<pixl_bit> output_pixl_temp;
+	hls::stream<bool> y0;
+	hls::stream<bool> y1;
+	hls::stream<bool> output;
+	static ap_uint<6> s_out_temp = 0;
+
+	static int c = 0;
+	for(int i = 0; i<DATA_LEN*sym_num*2; i++){
+		if(i%2==0){
+			data_in_axiu = data_in.read();
+			QAM_in_temp = data_in_axiu.range(QAM_unsigned_bit-1,0);
+			y0.write((bool)QAM_in_temp[0]);
+			y1.write((bool)QAM_in_temp[1]);
+			decoder_bit(y0,y1,0,output);
+			output_pixl_temp[0] = (ap_uint<1>)output.read();
+
+			y0.write((bool)QAM_in_temp[2]);
+			y1.write((bool)QAM_in_temp[3]);
+			decoder_bit(y0,y1,0,output);
+			output_pixl_temp[1] = (ap_uint<1>)output.read();
+			count = count + 2;
+		}
+		else{
+			data_in_axiu = data_in.read();
+			QAM_in_temp = data_in_axiu.range(QAM_unsigned_bit-1,0);
+			y0.write((bool)QAM_in_temp[0]);
+			y1.write((bool)QAM_in_temp[1]);
+			decoder_bit(y0,y1,0,output);
+			output_pixl_temp[2] = (ap_uint<1>)output.read();
+
+			y0.write((bool)QAM_in_temp[2]);
+			y1.write((bool)QAM_in_temp[3]);
+			decoder_bit(y0,y1,0,output);
+			output_pixl_temp[3] = (ap_uint<1>)output.read();
+			count = count + 2;
+			if(count > truncate-1){
+				data_in_axiu = output_pixl_temp;
+				data_out.write(data_in_axiu);
+			}else{
+				std::cout << "pass" << std::endl;
+			}
+		}
+	}
+
+	return;
+}
+
+void decoder_bit(hls::stream<bool>& y0_in, hls::stream<bool>& y1_in , int mode , hls::stream<bool>& output){
+	static bool trellis_table[64][2][2];     // ns // 0:up 1:down // 0-bit 1-bit
+
+	static ap_uint<truncate> trellis_survivor[64]={0};
+ 
+#pragma HLS ARRAY_PARTITION variable=trellis_survivor type=complete
+
+	ap_uint<truncate> temp_trellis_survivor[64]={0};
+	static int trellis_metric[64];
+	int temp_trellis_metric[64];
+	int temp;
+	static bool t = 0;
+	int ns_1, ns_0;
+	int up , down;
+	int best_metric,best_branch;
+	int temp_best_metric;
+	bool normal_flag = 0;
+	bool y0_d,y1_d;
+ 
+#pragma HLS dataflow
+
+	if(t==0){
+		for(int i=0 ; i<64 ; i++){  // cs = i
+			if(i<32){
+				ns_1 = ((i<<1)+1)&63;                                                                       //input = 1   next state
+				trellis_table[ns_1][0][0] = 1^((i&2)>>1)^((i&4)>>2)^((i&16)>>4)^((i&32)>>5);                //input = 1   output0
+				trellis_table[ns_1][0][1] = 1^((i&1))^((i&2)>>1)^((i&4)>>2)^((i&32)>>5);                    //input = 1   output1
+
+				ns_0 = (i<<1)&63;                                                                           //input = 0   next state
+				trellis_table[ns_0][0][0] = 0^((i&2)>>1)^((i&4)>>2)^((i&16)>>4)^((i&32)>>5);                //input = 0   output0
+				trellis_table[ns_0][0][1] = 0^((i&1))^((i&2)>>1)^((i&4)>>2)^((i&32)>>5);                    //input = 0   output1
+			}else{
+				ns_1 = ((i<<1)+1)&63;                                                                       //input = 1   next state
+				trellis_table[ns_1][1][0] = 1^((i&2)>>1)^((i&4)>>2)^((i&16)>>4)^((i&32)>>5);                //input = 1   output0
+				trellis_table[ns_1][1][1] = 1^((i&1))^((i&2)>>1)^((i&4)>>2)^((i&32)>>5);                    //input = 1   output1
+				ns_0 = (i<<1)&63;                                                                           //input = 0   next state
+				trellis_table[ns_0][1][0] = 0^((i&2)>>1)^((i&4)>>2)^((i&16)>>4)^((i&32)>>5);                //input = 0   output0
+				trellis_table[ns_0][1][1] = 0^((i&1))^((i&2)>>1)^((i&4)>>2)^((i&32)>>5);                    //input = 0   output1
+			}
+			trellis_metric[i] = 500;
+		}
+		trellis_metric[0] = 0;
+		t = 1;
+	}
+
+	y0_d = y0_in.read();
+	y1_d = y1_in.read();
+
+	for(int i=0 ; i<64 ; i++){//{(i-1)/2} = cs      i = ns
+		if(i%2){//ns odd
+			up = trellis_metric[(i-1)/2]+(int)(y0_d^trellis_table[i][0][0])+(int)(y1_d^trellis_table[i][0][1]);
+			down = trellis_metric[(i-1)/2+32]+(int)(y0_d^trellis_table[i][1][0])+(int)(y1_d^trellis_table[i][1][1]);//up+32
+		}else{//ns even
+			up = trellis_metric[(i)/2]+(int)(y0_d^trellis_table[i][0][0])+(int)(y1_d^trellis_table[i][0][1]);
+			down = trellis_metric[(i)/2+32]+(int)(y0_d^trellis_table[i][1][0])+(int)(y1_d^trellis_table[i][1][1]);//up+32
+		}
+
+		if(up<=down){//up smaller than down
+			temp_trellis_metric[i] = up;
+			normal_flag = (up>100000000)? 1 : normal_flag;
+			temp_trellis_survivor[i] = (trellis_survivor[i]<<1);
+			trellis_survivor[i] = temp_trellis_survivor[i];
+
+		}else{
+			temp_trellis_metric[i] = down;
+			normal_flag = (down>100000000)? 1 : normal_flag;
+			temp_trellis_survivor[i] = (trellis_survivor[i]<<1)^1;
+			trellis_survivor[i] = temp_trellis_survivor[i];
+		}
+	}
+	best_metric = temp_trellis_metric[0];
+	best_branch = 0;
+	bool flag;
+	int count = 1;
+	if(mode==0){//Best state
+		for(int i=1 ; i<64*2-1 ; i++){
+			if(i%2){
+				temp = temp_trellis_metric[count];
+				flag = (bool)(best_metric > temp);
+			}else{
+				if(flag){
+					best_metric = temp;
+					best_branch = count;
+				}
+				count = count+1;
+			}
+		}
+	}else{//Fixed state
+		best_branch = 0;
+	}
+	if(normal_flag){
+		for(int i=0 ; i<64 ; i++){
+			trellis_metric[i] = temp_trellis_metric[i] - 100000000;
+		}
+		normal_flag = 0;
+	}else{
+		for(int i=0 ; i<64 ; i++){
+			trellis_metric[i] = temp_trellis_metric[i];
+		}
+	}
+ 
+	for(int i=0; i<truncate-1 ; i++){
+		if(best_branch%2){//odd
+			if((temp_trellis_survivor[best_branch]>>i)&1){//down
+				best_branch = (best_branch-1)/2+32;
+			}else{//up
+				best_branch = (best_branch-1)/2;
+			}
+		}else{//even
+			if((temp_trellis_survivor[best_branch]>>i)&1){////down
+				best_branch = (best_branch)/2+32;
+			}else{//up
+				best_branch = (best_branch)/2;
+			}
+		}
+	}
+
+	output.write(best_branch%2);
+}
