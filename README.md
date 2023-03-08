@@ -1,4 +1,4 @@
-# ofdm-hls
+# OFDM-HLS
 This project is about an OFDM communication system with multipath channel.
 The system can be built up through direct connection and composable pipeline, and the corresponding source codes are attached.
 
