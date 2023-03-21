@@ -7,7 +7,7 @@ More detailed information could be found in the design document and workbook on 
 ## 。Built whole project
 Go to this folder `cd project/`.  
 This folder can built whole project by the command `bash run_composable_main.sh` under this folder.  
-This command will generate `composable_communcation/` vivado project, include communcation composable pipeline block design. 
+This command will generate `composable_communcation/` vivado project, include communcation composable pipeline block design.  
 The commun.bit and commun.hwh files can satisfy both without ecc and with ecc cases.  
 The corresponding host code of two cases are include in composable_pipeline.ipynb.  
 Cell [1], Cell[2] and Cell[3] are for without ecc case, and the order is [1]->[2]->[3].  
