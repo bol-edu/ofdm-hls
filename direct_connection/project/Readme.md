@@ -40,9 +40,9 @@ In this section, some example results would be shown.
 #### - The original figure
 ![image](https://user-images.githubusercontent.com/102524142/218643587-45041ab9-763b-453e-b0fe-ca159eef95aa.png)
 #### - The figuer after transmitted and decoded by the basic OFDM system, for TAP_NUM=1 SNR=10dB  
-![image](https://user-images.githubusercontent.com/102524142/218643624-4938cba4-970a-45c3-b3a1-f99af5b0e384.png)
+![image](https://user-images.githubusercontent.com/102524142/226565344-1c8f9bb2-1825-4ee3-987d-6e52ffd10d9f.png)
 #### - The figure after transmitted and decoded by the OFDM system with error correction code, for TAP_NUM=1 SNR=10dB  
-![image](https://user-images.githubusercontent.com/102524142/218643748-2ff0995e-0b8d-4a35-aeee-0a4ba823acf7.png)
+![image](https://user-images.githubusercontent.com/102524142/226565435-8b26af75-7312-42be-b29f-5c3f85bd3deb.png)
 #### - SNR(dB) v.s. BER, for TAP_NUM=1  
 **#without ecc**  
 SNR = [0, 5, 10, 15, 20]  
