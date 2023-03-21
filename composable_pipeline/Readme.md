@@ -4,15 +4,15 @@ The block diagram of the system can be shown as follow
 Every IP should be exported individually.
 More detailed information could be found in the design document and workbook on the home page.
 
-## 。Built whole project
-Change the direction to `cd project/`.  
-The whole project can be built by the command `bash run_composable_main.sh` under this folder.  
-This command will generate `composable_communcation/` vivado project, include communcation composable pipeline block design.  
-The `commun.bit` and `commun.hwh` files can satisfy both without ecc and with ecc cases.  
-The corresponding host code of two cases are include in composable_pipeline.ipynb.  
-Cell [1], Cell[2] and Cell[3] are for without ecc case, and the order is [1]->[2]->[3].  
-Cell [4], Cell[5] and Cell[6] are for with ecc case, and the order is [4]->[5]->[6].  
-Cell [7] is the comparison of the two cases under TAP_NUM=3 and SNR = [0, 5, 10, 15, 20].  
+## 。Built Steps  
+1. Change the direction to `cd project/`.  
+2. Run `bash run_composable_main.sh` and the whole project will build up automatically.  
+3. After the the vitis_hls project and vivado project done.  
+4. The `commun.bit` and `commun.hwh` will generate under `jupyter_notebooks_project/`.  
+5. Upload all files include in `jupyter_notebooks_project/`.  
+6. For without ecc case, run the cells [1]->[2]->[3].  
+7. For without ecc case, run the cells [4]->[5]->[6].  
+8. Run cell [7] for the comparison of the two cases under TAP_NUM=1 and SNR = [0, 5, 10, 15, 20].  
 
 ## 。Folder Structure
 In this section, the function of all folders in this project would be explained.
